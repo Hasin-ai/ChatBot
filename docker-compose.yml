@@ -1,0 +1,48 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: sqlite:////app/data/app.db
+      JWT_SECRET: replace-this-before-deployment
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: chat_history
+      OLLAMA_BASE_URL: http://ollama:11434
+      LIQUID_MODEL: LiquidAI/lfm2.5-1.2b-instruct
+      CHATKIT_DOMAIN_KEY: local-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_data:/app/data
+    depends_on:
+      - qdrant
+      - ollama
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_CHATKIT_DOMAIN_KEY: local-dev
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
+  qdrant_data:
+  ollama_data:
